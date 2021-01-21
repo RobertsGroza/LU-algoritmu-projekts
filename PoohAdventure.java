@@ -1,4 +1,4 @@
-// Autors: Roberts Groza rg11080
+// Author: Roberts Groza rg11080
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,9 +11,13 @@ public class PoohAdventure {
     public static void main(String[] args) {
         HundredAcreWoodGraph graph = new HundredAcreWoodGraph("input.txt");
         graph.solve();
+        graph.printResults();
     }
 }
 
+/**
+ * Represents undirected Edge in graph with 2 verticles and complexity
+ */
 class Edge {
     int verticleA;
     int verticleB;
@@ -32,20 +36,23 @@ class Edge {
     }
 }
 
+/**
+ * Subset used to represent Subsets in Kruskal's algorithm. Each subset has
+ * unique root. The higher rank - the bigger subset (used in union algorithm)
+ */
 class Subset {
-    int parent;
+    int root;
     int rank;
 
-    Subset(int parent, int rank) {
-        this.parent = parent;
+    Subset(int root, int rank) {
+        this.root = root;
         this.rank = rank;
     }
 };
 
 class HundredAcreWoodGraph {
-    private LinkedList<Edge> edgeList;
-    private Edge[] mstEdges;
-    private int verticleCount;
+    private LinkedList<Edge> edgeList; // Graphs edge list sorted by complexity DESC
+    private int verticleCount; // Verticle count in graph
 
     HundredAcreWoodGraph(String inputFileName) {
         edgeList = new LinkedList<Edge>();
@@ -53,6 +60,12 @@ class HundredAcreWoodGraph {
         fillEdgeList(inputFileName);
     }
 
+    /**
+     * Creates edgeList sorted by complexity DESC from inputFile. Edge with biggest
+     * complexity will always be first in list.
+     *
+     * @param inputFileName
+     */
     private void fillEdgeList(String inputFileName) {
         try {
             File inputFile = new File(inputFileName);
@@ -90,31 +103,54 @@ class HundredAcreWoodGraph {
         }
     }
 
-    int find(Subset subsets[], int i) {
-        if (subsets[i].parent != i) {
-            subsets[i].parent = find(subsets, subsets[i].parent);
+    /**
+     * Finds subset's route. Every subset has it's own route.
+     *
+     * @param subsets
+     * @param verticle
+     * @return
+     */
+    int findSet(Subset subsets[], int verticle) {
+        if (subsets[verticle].root != verticle) {
+            subsets[verticle].root = findSet(subsets, subsets[verticle].root);
         }
 
-        return subsets[i].parent;
+        return subsets[verticle].root;
     }
 
-    void Union(Subset subsets[], int x, int y) {
-        int xroot = find(subsets, x);
-        int yroot = find(subsets, y);
+    /**
+     * Union subset1 and subset2. Attaches smaller rank subset under root of higher
+     * rank subset.
+     *
+     * @param subsets
+     * @param subset1Root
+     * @param subset2Root
+     */
+    void Union(Subset subsets[], int subset1Root, int subset2Root) {
+        int root1 = findSet(subsets, subset1Root);
+        int root2 = findSet(subsets, subset2Root);
 
-        if (subsets[xroot].rank < subsets[yroot].rank) {
-            subsets[xroot].parent = yroot;
-        } else if (subsets[xroot].rank > subsets[yroot].rank) {
-            subsets[yroot].parent = xroot;
+        if (subsets[root1].rank < subsets[root2].rank) {
+            subsets[root1].root = root2;
+        } else if (subsets[root1].rank > subsets[root2].rank) {
+            subsets[root2].root = root1;
         } else {
-            subsets[yroot].parent = xroot;
-            subsets[xroot].rank++;
+            subsets[root2].root = root1;
+            subsets[root1].rank++;
         }
     }
 
+    /**
+     * 1. Gets Maximum Spanning Tree using Kruskal's algorithm.
+     *
+     * 2. Every Maximum Spanning Tree edge gets excluded from edgeList.
+     *
+     * 3. All MST edges with complexity < 0 gets included back in edgeList, because
+     * negative complexity will make HundredAcreWoodGraph all edge complexity sum
+     * even more smaller
+     */
     public void solve() {
-        mstEdges = new Edge[verticleCount];
-
+        Edge[] mstEdges = new Edge[verticleCount];
         Subset subsets[] = new Subset[verticleCount];
 
         for (int i = 0; i < verticleCount; i++) {
@@ -122,33 +158,35 @@ class HundredAcreWoodGraph {
         }
 
         int edgeCount = 0;
-        int i = 0;
+        int edgeListIterator = 0;
 
         while (edgeCount < verticleCount - 1) {
-            Edge candidateEdge = edgeList.get(i);
+            Edge candidateEdge = edgeList.get(edgeListIterator);
 
-            int x = find(subsets, candidateEdge.verticleA);
-            int y = find(subsets, candidateEdge.verticleB);
+            int subset1Root = findSet(subsets, candidateEdge.verticleA);
+            int subset2Root = findSet(subsets, candidateEdge.verticleB);
 
-            if (x != y) {
+            // Different subset roots means different subsets, so there will be no cycle
+            if (subset1Root != subset2Root) {
                 mstEdges[edgeCount++] = candidateEdge;
-                Union(subsets, x, y);
-                edgeList.remove(i);
+                Union(subsets, subset1Root, subset2Root);
+                edgeList.remove(edgeListIterator);
             } else {
-                i++;
+                edgeListIterator++;
             }
         }
 
-        for (int j = 0; j < edgeCount; j++) {
-            if (mstEdges[j].complexity < 0) {
-                edgeList.add(mstEdges[j]);
+        for (int i = 0; i < edgeCount; i++) {
+            if (mstEdges[i].complexity < 0) {
+                edgeList.add(mstEdges[i]);
             }
         }
-
-        processResult();
     }
 
-    private void processResult() {
+    /**
+     * Prints results into output file output.txt
+     */
+    public void printResults() {
         int totalSum = 0;
         int edgeCount = edgeList.size();
 
@@ -172,7 +210,7 @@ class HundredAcreWoodGraph {
             }
 
             myWriter.close();
-            System.out.println("Success");
+            System.out.println("Success!");
         } catch (IOException e) {
             System.out.println("Error while writing into file");
             e.printStackTrace();
