@@ -126,7 +126,7 @@ class HundredAcreWoodGraph {
      * @param subset1Root
      * @param subset2Root
      */
-    void Union(Subset subsets[], int subset1Root, int subset2Root) {
+    void union(Subset subsets[], int subset1Root, int subset2Root) {
         int root1 = findSet(subsets, subset1Root);
         int root2 = findSet(subsets, subset2Root);
 
@@ -169,7 +169,7 @@ class HundredAcreWoodGraph {
             // Different subset roots means different subsets, so there will be no cycle
             if (subset1Root != subset2Root) {
                 mstEdges[edgeCount++] = candidateEdge;
-                Union(subsets, subset1Root, subset2Root);
+                union(subsets, subset1Root, subset2Root);
                 edgeList.remove(edgeListIterator);
             } else {
                 edgeListIterator++;
